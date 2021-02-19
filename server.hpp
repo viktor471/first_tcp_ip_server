@@ -86,8 +86,8 @@ public:
   Server( const std::string&  s_addr,
           in_port_t sin_port = 30000       );
 
-  sockaddr *get_sockaddr(       PeerName     peer_name_ ) const;
-  sockaddr *get_sockaddr( const sockaddr_in& addr       ) const;
+  sockaddr *get_sockaddr( PeerName     peer_name_ );
+  sockaddr *get_sockaddr( sockaddr_in& addr       );
 
   sockaddr *initilize_connection_sockaddr( const in_addr_t& s_addr_,
                                                  in_port_t  sin_port_ );

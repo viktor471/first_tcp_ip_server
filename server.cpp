@@ -3,7 +3,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-sockaddr *Server::get_sockaddr( PeerName peer_name_ ) const
+sockaddr *Server::get_sockaddr( PeerName peer_name_ )
 {
   if     ( peer_name_ == SERVER )
     return get_sockaddr( _server );
@@ -17,9 +17,9 @@ sockaddr *Server::get_sockaddr( PeerName peer_name_ ) const
   }
 }
 
-sockaddr *Server::get_sockaddr( const sockaddr_in& addr ) const
+sockaddr *Server::get_sockaddr( sockaddr_in& addr )
 {
-  return (sockaddr*)&addr;
+  return reinterpret_cast<sockaddr*>(&addr);
 }
 
 sockaddr *Server::initilize_connection_sockaddr( const in_addr_t& s_addr_,

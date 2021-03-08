@@ -13,47 +13,133 @@
 #include <unistd.h>
 #include <cstring>
 #include <memory>
-#include <QString>
-#include <QTextStream>
 #include <iomanip>
-#include <QDebug>
 #include <string>
+#include <chrono>
+#include <thread>
 
-
-const int    ON = 1;
-const int    PENDING_CONNECTIONS = 4;
-const int    FOREVER = 1;
+const int    ON       = 1;
+const int    FOREVER  = 1;
 const int    BUF_SIZE = 1024;
 const size_t MSG_SIZE = 10;
 
-typedef struct in_addr In_addr;
+const int    PENDING_CONNECTIONS = 4;
+const int    ADDR_LENGTH         = strlen( "000.000.000.000");
+
+const socklen_t  SOCKADDR_IN_LENGTH = sizeof( sockaddr_in );
+
+
+typedef struct in_addr in_addr;
 typedef int Socket;
 
-
-class Server
+  class Server
 {
 
-  typedef std::unique_ptr< fd_set > fd_set_ptr ;
   typedef std::unique_ptr< char >   char_ptr ;
+
+public:
+  typedef struct Hum_read_addr_port
+  {
+
+    std::string  _addr;
+    uint16_t     _port;
+
+    Hum_read_addr_port( const std::string& addr_ = "", uint16_t port_ = 0 ) :
+      _addr(addr_) , _port(port_)  {}
+
+  } HR_addr_port;
+
+
 private:
 
+  class Timer
+  {
+      using hclock       = std::chrono::high_resolution_clock;
+      using time_point   = hclock::time_point;
+      time_point _start;
+      time_point _end;
+      long       _period;
+
+  public:
+
+      Timer( long period = 0 ) : _period( period ) {}
+
+      void set_period( long period )
+      {
+          _period = period;
+      }
+
+      void start()
+      {
+          _start = hclock::now();
+      }
+
+      void end()
+      {
+          _end = hclock::now();
+      }
+
+      auto elapsed()
+      {
+          using namespace std::chrono;
+
+          return duration_cast< microseconds >( _end - _start ).count();
+      }
+
+      auto elapsed_from_start()
+      {
+          using namespace std::chrono;
+          end();
+
+          return duration_cast< microseconds >( _end - _start ).count();
+      }
+
+      bool is_elapsed()
+      {
+          return elapsed_from_start() > _period;
+      }
+
+  };
+
+
+  Timer       _timer;
   sockaddr_in _server;
   sockaddr_in _client;
-  char_ptr    _buffer{ new char[3] };
+  char_ptr    _buffer{ new char[BUF_SIZE] };
 
   Socket      _data_sock;
   Socket      _connection_sock;
 
-  fd_set_ptr _read_set;
-  fd_set_ptr _write_set;
+  fd_set      _all_set;
 
   short       _max_fd;
-  short       ready_connection_sockets;
-  timeval     select_timeout;
+  short       _ready_connection_sockets;
+  timeval     _select_timeout;
 
-  socklen_t   socklen;
+  socklen_t   _socklen;
+  int         _result;
+
+  bool        _is_data_for_sending;
+  int         _read_size;
 
   void configuring();
+  void set_reuse_addr();
+
+  void perror       ( const std::string &msg   ) const;
+  void inet_net_pton(       std::string &&addr );
+  void set_maxfd    (       short       new_   );
+  void rebuild_set  (       Socket      sock_  );
+
+  void show_addr_port( const std::string  &msg,
+                       const HR_addr_port &addr );
+
+  void get_sock_name ( Socket sock_fd, sockaddr_in &addr );
+  void inet_ntop( sockaddr_in &addr, char buf[ ADDR_LENGTH ] );
+
+  void show_received_buf();
+  void close_connection();
+  void shutdown();
+  void close();
 
 public:
 
@@ -63,28 +149,11 @@ public:
     CLIENT
   };
 
-  enum RW
-  {
-    READ,
-    WRITE
-  };
-
-  struct HumReadable_Addr_Port
-  {
-
-    QString _addr;
-    quint32 _port;
-
-    HumReadable_Addr_Port( const QString& addr_ = 0, quint32 port_ = 0 ) :
-      _addr(addr_) , _port(port_)  {}
-
-  };
-
   Server( const in_addr_t& s_addr   = INADDR_ANY,
-                in_port_t  sin_port = 30000       );
+                in_port_t  sin_port = 28650       );
 
-  Server( const std::string&  s_addr,
-          in_port_t sin_port = 30000       );
+  Server( std::string  &&s_addr,
+          in_port_t      sin_port = 28650 );
 
   sockaddr *get_sockaddr( PeerName     peer_name_ );
   sockaddr *get_sockaddr( sockaddr_in& addr       );
@@ -98,19 +167,16 @@ public:
   int       write();
   int       read();
 
-  void      rebuild_set( Socket sock_, RW rw_type_ );
+  void      select( fd_set &read_set, fd_set &write_set );
   void      run();
 
   short     get_ready_connection_sockets() const;
   timeval   set_select_timeval( const timeval &tm = {0,0} );
   timeval   get_select_timeval() const;
 
-  HumReadable_Addr_Port
-  getHumanReadable_Addr_and_Port( const sockaddr_in& addr ) const;
-
-  HumReadable_Addr_Port
-  getHumanReadable_Addr_and_Port( const sockaddr&    addr ) const;
+  HR_addr_port get_hum_read_addr_port( Socket sock_fd );
 
 };
+
 
 #endif // SERVER_HPP

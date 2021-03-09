@@ -14,116 +14,25 @@
 #include <cstring>
 #include <memory>
 #include <iomanip>
-#include <string>
-#include <chrono>
-#include <thread>
-
-const int    ON       = 1;
-const int    FOREVER  = 1;
-const int    BUF_SIZE = 1024;
-const size_t MSG_SIZE = 10;
+#include "end_point.hpp"
 
 const int    PENDING_CONNECTIONS = 4;
-const int    ADDR_LENGTH         = strlen( "000.000.000.000");
-
-const socklen_t  SOCKADDR_IN_LENGTH = sizeof( sockaddr_in );
-
 
 typedef struct in_addr in_addr;
-typedef int Socket;
 
-  class Server
+class Server : public End_point
 {
-
-  typedef std::unique_ptr< char >   char_ptr ;
-
-public:
-  typedef struct Hum_read_addr_port
-  {
-
-    std::string  _addr;
-    uint16_t     _port;
-
-    Hum_read_addr_port( const std::string& addr_ = "", uint16_t port_ = 0 ) :
-      _addr(addr_) , _port(port_)  {}
-
-  } HR_addr_port;
-
 
 private:
 
-  class Timer
-  {
-      using hclock       = std::chrono::high_resolution_clock;
-      using time_point   = hclock::time_point;
-      time_point _start;
-      time_point _end;
-      long       _period;
-
-  public:
-
-      Timer( long period = 0 ) : _period( period ) {}
-
-      void set_period( long period )
-      {
-          _period = period;
-      }
-
-      void start()
-      {
-          _start = hclock::now();
-      }
-
-      void end()
-      {
-          _end = hclock::now();
-      }
-
-      auto elapsed()
-      {
-          using namespace std::chrono;
-
-          return duration_cast< microseconds >( _end - _start ).count();
-      }
-
-      auto elapsed_from_start()
-      {
-          using namespace std::chrono;
-          end();
-
-          return duration_cast< microseconds >( _end - _start ).count();
-      }
-
-      bool is_elapsed()
-      {
-          return elapsed_from_start() > _period;
-      }
-
-  };
-
-
-  Timer       _timer;
-  sockaddr_in _server;
   sockaddr_in _client;
-  char_ptr    _buffer{ new char[BUF_SIZE] };
 
-  Socket      _data_sock;
   Socket      _connection_sock;
-
-  fd_set      _all_set;
-
-  short       _max_fd;
-  short       _ready_connection_sockets;
-  timeval     _select_timeout;
-
-  socklen_t   _socklen;
-  int         _result;
 
   bool        _is_data_for_sending;
   int         _read_size;
 
   void configuring();
-  void set_reuse_addr();
 
   void perror       ( const std::string &msg   ) const;
   void inet_net_pton(       std::string &&addr );

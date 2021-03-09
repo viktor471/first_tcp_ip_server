@@ -8,11 +8,15 @@ CONFIG -= app_bundle
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+        ../includes/sources/end_point.cpp \
         main.cpp \
         server.cpp
 
 HEADERS += \
+  ../includes/headers/end_point.hpp \
   server.hpp
+
+INCLUDEPATH += ../includes/headers
 
 LIBS += -lresolv
 

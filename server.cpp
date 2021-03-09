@@ -28,14 +28,22 @@ sockaddr *Server::get_sockaddr( sockaddr_in& addr )
 sockaddr *Server::initilize_connection_sockaddr( const in_addr_t& s_addr_,
                                                  in_port_t sin_port_ )
 {
+  memset(&_server, 0, SOCKADDR_IN_LENGTH );
+  memset(&_client, 0, SOCKADDR_IN_LENGTH );
+
   _server.sin_addr.s_addr = htonl( s_addr_   );
   _server.sin_port        = htons( sin_port_ );
   _server.sin_family      = AF_INET;
 
-  memset( _server.sin_zero, 0, sizeof( _server.sin_zero )  );
-  _max_fd = 0;
+  _connection_sock = 0;
+  _data_sock       = 0;
   _is_data_for_sending = false;
+  memset( _server.sin_zero, 0, sizeof( _server.sin_zero )  );
+
+  _max_fd = 0;
   _read_size    = 0;
+  FD_ZERO(&_all_set);
+
 
   set_select_timeval( {0,0} );
 
@@ -101,7 +109,7 @@ int Server::read()
   else
   {
     _is_data_for_sending = true;
-    _read_size    = read_size;
+    _read_size           = read_size;
 
     Hum_read_addr_port addr_and_port = get_hum_read_addr_port( _data_sock );
 
@@ -379,25 +387,28 @@ Server::Server( const in_addr_t& s_addr, in_port_t sin_port )
 }
 
 
-Server::Server( std::string&& s_addr, in_port_t sin_port )
+Server::Server( std::string&& s_addr, in_port_t sin_port ) :
+  _timer(0),
+  _server(),
+  _client(),
+  _data_sock(0),
+  _connection_sock(0),
+  _max_fd(0),
+  _ready_connection_sockets(0),
+  _select_timeout(),
+  _socklen(0),
+  _result(0),
+  _is_data_for_sending(false),
+  _read_size(0)
 {
-
-  memset( &_client, 0, sizeof( _client ) );
-  memset( &_server, 0, sizeof( _server ) );
-
+  FD_ZERO(&_all_set);
   inet_net_pton(  std::move( s_addr )  );
 
-  _server.sin_port = htons( sin_port );
+  _server.sin_port    = htons( sin_port );
 
-  _server.sin_family      = AF_INET;
+  _server.sin_family  = AF_INET;
 
   memset( _server.sin_zero, 0, sizeof( _server.sin_zero )  );
-
-  _max_fd = 0;
-  _is_data_for_sending = false;
-  _read_size    = 0;
-
-  set_select_timeval( {0,0} );
 
   configuring();
 
